@@ -124,3 +124,26 @@ Cree un archivo de configuración de certificado /opt/ssl/*
 - $ cd /opt/ssl/ca-config.json
 - $ cfssl gencert -initca ca-csr.json | cfssljson -bare ca
 - $ cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes etcd-csr.json | cfssljson -bare etcd
+
+## Copiar archivos de configuración a la carpeta de instalación
+
+Para copiar los archivos de configuración generados en el último paso a la carpeta de instalación, debe realizar las siguientes tareas en los 2 nodos maestros.
+
+Crea la carpeta del certificado
+
+* $ mkdir -p /etc/etcd/ssl
+
+Crea el director de datos etcd
+
+* $ mkdir -p /var/lib/etcd
+
+Copie certificados etcd del nodo maestro "Master01"
+
+* $ scp -rp 192.168.100.5:/opt/ssl/*.pem /etc/etcd/ssl/
+
+### Instalar etcd
+
+* $ wget https://github.com/coreos/etcd/releases/download/v3.3.4/etcd-v3.3.4-linux-amd64.tar.gz
+* $ tar -zxvf etcd-v3.3.4-linux-amd64.tar.gz
+* $ cp etcd-v3.3.4-linux-amd64/etcd* /usr/local/bin/
+
