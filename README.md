@@ -4,8 +4,6 @@ Kubernetes es uno de los sistemas de orquestación de contenedores de código ab
 
 # Diseño de arquitectura
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
 | Nombre del server  | Dirrecion IP |
 |---|---|
 | master01  | 192.168.100.4  |
@@ -147,3 +145,86 @@ Copie certificados etcd del nodo maestro "Master01"
 * $ tar -zxvf etcd-v3.3.4-linux-amd64.tar.gz
 * $ cp etcd-v3.3.4-linux-amd64/etcd* /usr/local/bin/
 
+# Configuración del clúster ETCD
+
+### Master 01
+
+Cree el archivo /etc/systemd/system/etcd.service con el siguiente contenido
+```
+[Unit]
+Description=Etcd Server
+After=network.target
+After=network-online.target
+Wants=network-online.target
+Documentation=https://github.com/coreos
+
+[Service]
+Type=notify
+WorkingDirectory=/var/lib/etcd/
+ExecStart=/usr/local/bin/etcd \
+--name=master01 \
+--cert-file=/etc/etcd/ssl/etcd.pem \
+--key-file=/etc/etcd/ssl/etcd-key.pem \
+--peer-cert-file=/etc/etcd/ssl/etcd.pem \
+--peer-key-file=/etc/etcd/ssl/etcd-key.pem \
+--trusted-ca-file=/etc/etcd/ssl/ca.pem \
+--peer-trusted-ca-file=/etc/etcd/ssl/ca.pem \
+--initial-advertise-peer-urls=https://192.168.100.04:2380 \
+--listen-peer-urls=https://192.168.100.04:2380 \
+--listen-client-urls=https://192.168.100.04:2379,http://127.0.0.1:2379 \
+--advertise-client-urls=https://192.168.100.04:2379 \
+--initial-cluster-token=etcd-cluster-0 \
+--initial-cluster=master01=https://192.168.100.04:2380,master02=https://192.168.100.05:2380\
+--initial-cluster-state=new \
+--data-dir=/var/lib/etcd
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+```
+Iniciar servicio etcd
+
+- $ systemctl daemon-reload && systemctl enable etcd && systemctl start etcd
+
+### Master 02
+
+Cree el archivo /etc/systemd/system/etcd.service con el siguiente contenido
+```
+[Unit]
+Description=Etcd Server
+After=network.target
+After=network-online.target
+Wants=network-online.target
+Documentation=https://github.com/coreos
+
+[Service]
+Type=notify
+WorkingDirectory=/var/lib/etcd/
+ExecStart=/usr/local/bin/etcd \
+--name=master01 \
+--cert-file=/etc/etcd/ssl/etcd.pem \
+--key-file=/etc/etcd/ssl/etcd-key.pem \
+--peer-cert-file=/etc/etcd/ssl/etcd.pem \
+--peer-key-file=/etc/etcd/ssl/etcd-key.pem \
+--trusted-ca-file=/etc/etcd/ssl/ca.pem \
+--peer-trusted-ca-file=/etc/etcd/ssl/ca.pem \
+--initial-advertise-peer-urls=https://192.168.100.05:2380 \
+--listen-peer-urls=https://192.168.100.05:2380 \
+--listen-client-urls=https://192.168.100.05:2379,http://127.0.0.1:2379 \
+--advertise-client-urls=https://192.168.100.05:2379 \
+--initial-cluster-token=etcd-cluster-0 \
+--initial-cluster=master01=https://192.168.100.04:2380,master02=https://192.168.100.05:2380\
+--initial-cluster-state=new \
+--data-dir=/var/lib/etcd
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+```
+Iniciar servicio etcd
+
+- $ systemctl daemon-reload && systemctl enable etcd && systemctl start etcd
