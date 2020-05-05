@@ -228,3 +228,137 @@ WantedBy=multi-user.target
 Iniciar servicio etcd
 
 - $ systemctl daemon-reload && systemctl enable etcd && systemctl start etcd
+
+
+Verifique el estado del clúster ectd
+
+- $ etcdctl --ca-file=/etc/etcd/ssl/ca.pem --cert-file=/etc/etcd/ssl/etcd.pem --key-file=/etc/etcd/ssl/etcd-key.pem cluster-health
+
+## Instalar Keepalived en todos los nodos maestros
+
+### Master01
+
+- $ apt install keepalived
+
+Cree el archivo de configuración keepalived /etc/keepalived/keepalived.conf con el siguiente contenido
+
+```
+
+global_defs {
+    router_id LVS_k8s
+    }
+    
+    vrrp_script CheckK8sMaster {
+        script "curl -k https://192.168.100.04:6443"
+        interval 3
+        timeout 9
+        fall 2
+        rise 2
+    }
+    
+    vrrp_instance VI_1 {
+        state BACKUP
+        interface eth0
+        virtual_router_id 61
+        priority 80
+        advert_int 1
+        mcast_src_ip 192.168.100.04
+        nopreempt
+        authentication {
+            auth_type PASS
+            auth_pass KEEPALIVED_AUTH_PASS
+        }
+        unicast_peer {
+            192.168.100.05
+        }
+        virtual_ipaddress {
+            192.168.100.60/24
+        }
+        track_script {
+            CheckK8sMaster
+        }
+    
+    }
+```
+Comience keepalived
+
+- $ systemctl daemon-reload && systemctl enable keepalived && systemctl restart keepalived
+
+### Master02
+
+- $ apt install keepalived
+
+Cree el archivo de configuración keepalived /etc/keepalived/keepalived.conf con el siguiente contenido
+
+```
+
+global_defs {
+    router_id LVS_k8s
+    }
+    
+    vrrp_script CheckK8sMaster {
+        script "curl -k https://192.168.100.05:6443"
+        interval 3
+        timeout 9
+        fall 2
+        rise 2
+    }
+    
+    vrrp_instance VI_1 {
+        state BACKUP
+        interface eth0
+        virtual_router_id 61
+        priority 80
+        advert_int 1
+        mcast_src_ip 192.168.100.05
+        nopreempt
+        authentication {
+            auth_type PASS
+            auth_pass KEEPALIVED_AUTH_PASS
+        }
+        unicast_peer {
+            192.168.100.04
+        }
+        virtual_ipaddress {
+            192.168.100.60/24
+        }
+        track_script {
+            CheckK8sMaster
+        }
+    
+    }
+```
+
+Comience keepalived
+
+- $ systemctl daemon-reload && systemctl enable keepalived && systemctl restart keepalived
+
+## Iniciando Master Cluster
+
+### Master01
+
+Cree el archivo kubeadm-config.yaml con el siguiente contenido
+
+``` 
+apiVersion: kubeadm.k8s.io/v1alpha1
+kind: MasterConfiguration
+api:
+advertiseAddress: 192.168.100.10
+etcd:
+endpoints:
+- https://192.168.100.04:2379
+- https://192.168.100.05:2379
+caFile: /etc/etcd/ssl/ca.pem
+certFile: /etc/etcd/ssl/etcd.pem
+keyFile: /etc/etcd/ssl/etcd-key.pem
+networking:
+podSubnet: 10.244.0.0/16
+apiServerCertSANs:
+- 192.168.100.10
+- 192.168.100.20
+- 192.168.100.30
+- 192.168.100.60
+apiServerExtraArgs:
+endpoint-reconciler-type: lease
+
+```
