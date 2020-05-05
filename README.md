@@ -1,3 +1,15 @@
+
+# Integarnaes del grupo 
+
+- Jose Lopez 
+- Silvia Lopez
+- Jairo Herrera
+- Rony Cifuentes
+- Juan Carlos Morales
+
+# [Video de lo realizado](https://drive.google.com/file/d/1QIBtmcpz4nUmnjN4U68KInV0pJU6wXx9/view?usp=sharing)
+
+
 # Kubernetes Cluster
 
 Kubernetes es uno de los sistemas de orquestación de contenedores de código abierto más populares. Se utiliza para administrar toda la vida de las aplicaciones en contenedores, incluida la implementación, el escalado, la actualización, etc.
