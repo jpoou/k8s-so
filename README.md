@@ -343,7 +343,7 @@ Cree el archivo kubeadm-config.yaml con el siguiente contenido
 apiVersion: kubeadm.k8s.io/v1alpha1
 kind: MasterConfiguration
 api:
-advertiseAddress: 192.168.100.10
+advertiseAddress: 192.168.100.04
 etcd:
 endpoints:
 - https://192.168.100.04:2379
@@ -354,11 +354,110 @@ keyFile: /etc/etcd/ssl/etcd-key.pem
 networking:
 podSubnet: 10.244.0.0/16
 apiServerCertSANs:
-- 192.168.100.10
-- 192.168.100.20
-- 192.168.100.30
-- 192.168.100.60
+- 192.168.100.04
+- 192.168.100.05
 apiServerExtraArgs:
 endpoint-reconciler-type: lease
 
 ```
+
+Ejecute el siguiente comando para iniciar los servicios de Kubernetes Master
+
+- $ kubeadm init --config kubeadm-config.yaml
+
+
+Copie archivos pki a todos los demás nodos maestros
+
+- $ scp -rp /etc/kubernetes/pki 192.168.100.04:/etc/kubernetes/
+- $ scp -rp /etc/kubernetes/pki 192.168.100.05:/etc/kubernetes/
+
+
+### Master02
+
+Cree el archivo kubeadm-config.yaml con el siguiente contenido
+
+``` 
+apiVersion: kubeadm.k8s.io/v1alpha1
+kind: MasterConfiguration
+api:
+advertiseAddress: 192.168.100.05
+etcd:
+endpoints:
+- https://192.168.100.04:2379
+- https://192.168.100.05:2379
+caFile: /etc/etcd/ssl/ca.pem
+certFile: /etc/etcd/ssl/etcd.pem
+keyFile: /etc/etcd/ssl/etcd-key.pem
+networking:
+podSubnet: 10.244.0.0/16
+apiServerCertSANs:
+- 192.168.100.04
+- 192.168.100.05
+apiServerExtraArgs:
+endpoint-reconciler-type: lease
+```
+
+Ejecute el siguiente comando para iniciar los servicios de Kubernetes Master
+
+- $ kubeadm init --config kubeadm-config.yaml
+
+## Configure Kuberctl en todos los nodos maestros
+
+Ejecute el siguiente comando en todos los nodos maestros
+
+- $ mkdir -p /root/.kube
+- $ cp -i /etc/kubernetes/admin.conf /root/.kube/config
+
+## Configurar redes POD
+
+En uno de los maestros ejecute el siguiente comando:
+
+- $ kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.10.0/Documentation/kube-flannel.yml
+
+
+## Instalación de otros componentes / sistemas de soporte
+### Instalación del panel de Kubernetes
+
+Cree el archivo dashboard.yaml, archivo adjuntado en repositorio.
+
+Ejecute el siguiente comando en la consola
+- $ kubectl create -f dashboard.yaml
+
+## Instalar Helm
+
+
+La instalación se puede realizar en cualquier nodo maestro
+
+Cree el archivo helm-rbac.yaml como archivo helm RBAC, archivo adjuntado en repositorio.
+
+
+Ejecute el siguiente comando
+
+- $ kubectl create -f helm-rbac.yaml
+- $ wget https://storage.googleapis.com/kubernetes-helm/helm-v2.9.1-linux-amd64.tar.gz
+- $ tar -zxvf helm-v2.9.1-linux-amd64.tar.gz
+- $ cp linux-amd64/helm /usr/local/bin/
+
+- $ yum install socat -y
+- $ helm init --service-account tiller --tiller-namespace kube-system
+
+## Verificación de clúster
+
+Verifique la versión de Kubernetes
+- $ kubectl version
+
+Verifique el estado de los componentes de Kubernetes
+- $ kubectl get componentstatus
+
+Verifique el estado del nodo
+
+- $ kubectl get node
+
+
+### Inicie sesión en el panel de control de Kubernetes
+Abra https://192.168.100.04:6443/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy en su navegador y seleccione la opción Token
+
+Recupere el token del tablero ejecutando el siguiente comando en uno de los nodos maestros.
+
+- $ Dashboard_Secret=`kubectl get secret -n kube-system|grep kubernetes-dashboard-token|awk '{print $1}'`
+- $ kubectl describe secret -n kube-system ${Dashboard_Secret} |sed -n '$p'|awk '{print $NF}'
