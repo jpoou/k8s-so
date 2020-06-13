@@ -1,5 +1,5 @@
 
-# Integarnaes del grupo 
+# Integrantes del grupo 
 
 - Jose Lopez 
 - Silvia Lopez
